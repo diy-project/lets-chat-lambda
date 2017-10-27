@@ -1,0 +1,71 @@
+#
+# Let's Chat Built-in Defaults
+#
+
+env: development # development / production
+
+http:
+  enable: true
+  host:
+  port: 5000
+
+lambda:
+  enable: false
+
+database:
+  uri: mongodb://localhost/letschat
+
+secrets:
+  cookie: secretsauce
+
+sqs:
+  credentials: # Use a user with only SQS permissions!
+    accessKeyId: AKIAJ...
+    secretAccessKey: N+BC2br8YbA...
+    region: us-west-1
+  queuePrefix: lets-chat
+  messageRetentionPeriod: 60
+  longPollingPeriod: 20 # must be <= 20
+
+files:
+  enable: false
+  provider: s3
+  maxFileSize: 5000000
+  restrictTypes: true
+  allowedTypes:
+    - 'image/jpeg'
+    - 'image/png'
+    - 'image/gif'
+  s3:
+    accessKeyId: AKIAJ...
+    secretAccessKey: N+BC2br8YbA...
+    bucket: lets-chat
+    region: us-west-1
+
+auth:
+  throttling:
+    enable: true
+    threshold: 3
+  providers: [local] # [local, kerberos, ldap] - You can specify the order
+  local:
+    enableRegistration: true
+    passwordRegex: ^.{8,64}$
+
+private:
+  enable: true
+  roster: online # online / all
+  expire: 360 # false or number of minutes
+
+noRobots: true # Serve robots.txt with disallow
+
+giphy:
+  enable: true
+  rating: pg-13
+  limit: 24
+  apiKey: dc6zaTOxFJmzC
+
+rooms:
+  private: true
+
+i18n:
+  locale: en
