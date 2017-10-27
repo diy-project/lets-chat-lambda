@@ -243,7 +243,7 @@ function runLocalApp() {
     }
 
     console.log('Listening on', host, port);
-    app.listen(port, host);
+    server.listen(port, host);
 
     // This just prints to the console
     var art = fs.readFileSync('./app/misc/art.txt', 'utf8');
