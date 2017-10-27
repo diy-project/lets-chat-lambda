@@ -90,7 +90,9 @@ app.use(session({
 }));
 
 // Set compression before any routes
-app.use(compression({ threshold: 512 }));
+if (!lambdaEnabled) {
+    app.use(compression({threshold: 512}));
+}
 
 app.use(cookieParser());
 
