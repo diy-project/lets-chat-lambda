@@ -5,14 +5,16 @@
 env: development # development / production
 
 http:
-  enable: false
+  enable: true
   host:
   port: 5000
 
-http:
-  enable: true
+https:
+  enable: false
   host:
   port: 5001
+  key: key.pem
+  cert: certificate.pem
 
 lambda:
   enable: false
