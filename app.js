@@ -242,6 +242,7 @@ function runLocalApp() {
             .listen(settings.http.port || 5000, host);
     }
 
+    console.log('Listening on', host, port);
     app.listen(port, host);
 
     // This just prints to the console
