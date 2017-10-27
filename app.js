@@ -11,6 +11,8 @@ require('colors');
 var _ = require('lodash'),
     path = require('path'),
     fs = require('fs'),
+    http = require('http'),
+    https = require('https'),
     express = require('express'),
     session = require('express-session'),
     awsServerlessExpress = require('aws-serverless-express'),
@@ -44,14 +46,12 @@ var MongoStore = connectMongo(session),
 //
 app = express();
 if (httpsEnabled) {
-    var https = require('https');
     var credentials = {
         key: fs.readFileSync(settings.https.key),
         cert: fs.readFileSync(settings.https.cert)
     };
     server = https.createServer(credentials, app);
 } else if (httpEnabled) {
-    var http = require('http');
     server = http.createServer(app);
 } else if (lambdaEnabled) {
     server = awsServerlessExpress.createServer(app);
