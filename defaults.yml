@@ -5,9 +5,14 @@
 env: development # development / production
 
 http:
-  enable: true
+  enable: false
   host:
   port: 5000
+
+http:
+  enable: true
+  host:
+  port: 5001
 
 lambda:
   enable: false

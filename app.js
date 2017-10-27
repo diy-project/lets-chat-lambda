@@ -47,7 +47,15 @@ if (httpsEnabled) {
 }
 
 app = express();
-if (httpEnabled) {
+if (httpsEnabled) {
+    var https = require('https');
+    var credentials = {
+        key: fs.readFileSync(settings.https.key),
+        cert: fs.readFileSync(settings.https.cert)
+    };
+    app = express();
+    server = https.createServer(credentials, app);
+} else if (httpEnabled) {
     var http = require('http');
     server = http.createServer(app);
 } else if (lambdaEnabled) {
@@ -222,9 +230,22 @@ mongoose.connection.on('reconnected', function() {
 // Run server locally
 //
 function runLocalApp() {
-    // TODO: bring back HTTPS for local mode
-    var port = httpEnabled && settings.http.port;
-    var host = httpEnabled && settings.http.host || '0.0.0.0';
+    var port = httpsEnabled && settings.https.port ||
+        httpEnabled && settings.http.port;
+
+    var host = httpsEnabled && settings.https.host ||
+        httpEnabled && settings.http.host || '0.0.0.0';
+
+    if (httpsEnabled && httpEnabled) {
+        // Create an HTTP -> HTTPS redirect server
+        var redirectServer = express();
+        redirectServer.get('*', function(req, res) {
+            var urlPort = port === 80 ? '' : ':' + port;
+            res.redirect('https://' + req.hostname + urlPort + req.path);
+        });
+        http.createServer(redirectServer)
+            .listen(settings.http.port || 5000, host);
+    }
 
     app.listen(port, host);
 
