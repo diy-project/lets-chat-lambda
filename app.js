@@ -42,10 +42,6 @@ var MongoStore = connectMongo(session),
 //
 // express and sqs setup
 //
-if (httpsEnabled) {
-    throw new Error('HTTPS not supported');
-}
-
 app = express();
 if (httpsEnabled) {
     var https = require('https');
@@ -53,7 +49,6 @@ if (httpsEnabled) {
         key: fs.readFileSync(settings.https.key),
         cert: fs.readFileSync(settings.https.cert)
     };
-    app = express();
     server = https.createServer(credentials, app);
 } else if (httpEnabled) {
     var http = require('http');
