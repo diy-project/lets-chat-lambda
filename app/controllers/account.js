@@ -16,15 +16,24 @@ module.exports = function() {
     var app = this.app,
         sqs = this.sqs,
         core = this.core,
-        middlewares = this.middlewares;
+        middlewares = this.middlewares,
+        settings = this.settings;
 
     core.on('account:update', function(data) {
         sqs.emit('users:update', data.user);
     });
 
+    // Hack since API gateway mauls binary data
+    var assetUrl;
+    if (settings.cdn && settings.cdn.url) {
+        assetUrl = settings.cdn.url;
+    } else {
+        assetUrl = './media';
+    }
     var getRootHandler = function(req, res) {
         res.render('chat.html', {
             account: req.user,
+            assetUrl: assetUrl,
             settings: settings,
             version: psjon.version
         });
@@ -36,15 +45,16 @@ module.exports = function() {
         var image = _.chain(images).filter(function(file) {
             return /\.(gif|jpg|jpeg|png)$/i.test(file);
         }).sample().value();
-        var imageUrl;
         // Hack since API gateway mauls binary data
+        var assetUrl;
         if (settings.cdn && settings.cdn.url) {
-            imageUrl = settings.cdn.url + '/img/photos/' + image;
+            assetUrl = settings.cdn.url;
         } else {
-            imageUrl = './media/img/photos' + image;
+            assetUrl = './media';
         }
         res.render('login.html', {
-            photoUrl: imageUrl,
+            assetUrl: assetUrl,
+            photo: image,
             auth: auth.providers
         });
     };
