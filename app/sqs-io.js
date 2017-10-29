@@ -161,8 +161,6 @@ SqsIo.prototype._emit = function(params) {
         }
     };
     if (params.room) {
-        // TODO: remove this later (this is to catch a possible bug)
-        console.log('Room:', params.room);
         messageAttributes['Room'] = {
             DataType: 'String',
             StringValue: params.room

@@ -98,6 +98,7 @@
 			_img = document.createElement('img');
 			if (_orig.hasAttribute('href')) {
 				_img.setAttribute('src', _orig.getAttribute('href'));
+				_img.crossOrigin = '*';
 				//get width/height
 				_img.onload = function() {
 					_h = (_img.height > 0) ? _img.height : 32;
