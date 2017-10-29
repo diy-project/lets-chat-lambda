@@ -122,15 +122,23 @@ app.use(helmet.contentSecurityPolicy({
 }));
 
 var bundles = {};
+var servePath;
+if (lambdaEnabled && settings.cdn.url) {
+    servePath = settings.cdn.url + '/dist';
+} else {
+    servePath = 'media/dist';
+}
 app.use(require('connect-assets')({
     paths: [
         'media/js',
         'media/less'
     ],
     helperContext: bundles,
-    build: settings.env === 'production',
-    fingerprinting: settings.env === 'production',
-    servePath: 'media/dist'
+    build: true,
+    bundle: true,
+    compile: true,
+    fingerprinting: true,
+    servePath: servePath
 }));
 
 // Public

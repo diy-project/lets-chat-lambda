@@ -16,8 +16,8 @@ https:
   key: key.pem
   cert: certificate.pem
 
-lambda:
-  enable: false
+cdn:
+  url:
 
 database:
   uri: mongodb://localhost/letschat

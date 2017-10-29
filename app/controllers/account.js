@@ -36,8 +36,15 @@ module.exports = function() {
         var image = _.chain(images).filter(function(file) {
             return /\.(gif|jpg|jpeg|png)$/i.test(file);
         }).sample().value();
+        var imageUrl;
+        // Hack since API gateway mauls binary data
+        if (settings.cdn && settings.cdn.url) {
+            imageUrl = settings.cdn.url + '/img/photos/' + image;
+        } else {
+            imageUrl = './media/img/photos' + image;
+        }
         res.render('login.html', {
-            photo: image,
+            photoUrl: imageUrl,
             auth: auth.providers
         });
     };
