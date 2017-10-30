@@ -577,7 +577,7 @@
                                 var event = message.MessageAttributes.Event.StringValue;
                                 var room;
                                 if (message.MessageAttributes.Room) {
-                                   room = message.MessageAttributes.Room.StringValue;
+                                    room = message.MessageAttributes.Room.StringValue;
                                     console.log('Room:', room);
                                 }
                                 var data = JSON.parse(message.Body);
