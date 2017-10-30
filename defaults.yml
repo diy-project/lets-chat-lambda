@@ -17,7 +17,7 @@ https:
   cert: certificate.pem
 
 lambda:
-  # TODO: this is a hack to ensure that SQS messages are sent
+  # TODO: This is a hack to ensure that SQS messages are sent
   # We delay some responses to allow async code to execute (ms)
   sqsDelay: 500
 

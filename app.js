@@ -78,142 +78,6 @@ if (settings.env === 'production') {
     app.enable('view cache');
 }
 
-// Session
-var sessionStore = new MongoStore({
-    url: settings.database.uri,
-    autoReconnect: true
-});
-
-// Session
-app.use(session({
-    key: 'connect.sid',
-    secret: settings.secrets.cookie,
-    store: sessionStore,
-    cookie: { secure: httpsEnabled },
-    resave: false,
-    saveUninitialized: true
-}));
-
-// Set compression before any routes
-if (!lambdaEnabled) {
-    app.use(compression({threshold: 512}));
-}
-
-app.use(cookieParser());
-
-auth.setup(app, core);
-
-// Security protections
-app.use(helmet.frameguard());
-app.use(helmet.hidePoweredBy());
-app.use(helmet.ieNoOpen());
-app.use(helmet.noSniff());
-app.use(helmet.xssFilter());
-app.use(helmet.hsts({
-    maxAge: 31536000,
-    includeSubdomains: true,
-    force: httpsEnabled,
-    preload: true
-}));
-app.use(helmet.contentSecurityPolicy({
-    defaultSrc: ['\'none\''],
-    connectSrc: ['*'],
-    scriptSrc: ['\'self\'', '\'unsafe-eval\''],
-    styleSrc: ['\'self\'', 'fonts.googleapis.com', '\'unsafe-inline\''],
-    fontSrc: ['\'self\'', 'fonts.gstatic.com'],
-    mediaSrc: ['\'self\''],
-    objectSrc: ['\'self\''],
-    imgSrc: ['* data:']
-}));
-
-var bundles = {};
-var servePath;
-if (lambdaEnabled && settings.cdn.url) {
-    servePath = settings.cdn.url + '/dist';
-} else {
-    servePath = 'media/dist';
-}
-app.use(require('connect-assets')({
-    paths: [
-        'media/js',
-        'media/less'
-    ],
-    helperContext: bundles,
-    build: true,
-    bundle: true,
-    compile: true,
-    fingerprinting: true,
-    servePath: servePath
-}));
-
-// Public
-app.use('/media', express.static(__dirname + '/media', {
-    maxAge: '364d'
-}));
-
-// Templates
-var nun = nunjucks.configure('templates', {
-    autoescape: true,
-    express: app,
-    tags: {
-        blockStart: '<%',
-        blockEnd: '%>',
-        variableStart: '<$',
-        variableEnd: '$>',
-        commentStart: '<#',
-        commentEnd: '#>'
-    }
-});
-
-function wrapBundler(func) {
-    // This method ensures all assets paths start with "./"
-    // Making them relative, and not absolute
-    return function() {
-        return func.apply(func, arguments)
-                   .replace(/href="\//g, 'href="./')
-                   .replace(/src="\//g, 'src="./');
-    };
-}
-
-nun.addFilter('js', wrapBundler(bundles.js));
-nun.addFilter('css', wrapBundler(bundles.css));
-nun.addGlobal('text_search', false);
-
-// i18n
-i18n.configure({
-    directory: path.resolve(__dirname, './locales'),
-    locales: settings.i18n.locales || settings.i18n.locale,
-    defaultLocale: settings.i18n.locale
-});
-app.use(i18n.init);
-
-// HTTP Middlewares
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({
-    extended: true
-}));
-
-// IE header
-app.use(function(req, res, next) {
-    res.setHeader('X-UA-Compatible', 'IE=Edge,chrome=1');
-    next();
-});
-
-//
-// Controllers
-//
-_.each(controllers, function(controller) {
-    controller.apply({
-        app: app,
-        sqs: sqs,
-        core: core,
-        settings: settings,
-        middlewares: middlewares,
-        models: models,
-        controllers: controllers
-    });
-});
-
 //
 // Mongo
 //
@@ -235,6 +99,180 @@ mongoose.connection.on('connected', function() {
 mongoose.connection.on('reconnected', function() {
     console.log('Reconnected to MongoDB');
 });
+
+// Set compression before any routes
+if (!lambdaEnabled) {
+    app.use(compression({threshold: 512}));
+}
+
+//
+// Called after Mongoose connects
+//
+function postMongooseSetup() {
+    // Session
+    var sessionStore = new MongoStore({
+        mongooseConnection: mongoose.connection
+    });
+
+    // Session
+    app.use(session({
+        key: 'connect.sid',
+        secret: settings.secrets.cookie,
+        store: sessionStore,
+        cookie: {secure: httpsEnabled},
+        resave: false,
+        saveUninitialized: true
+    }));
+
+    app.use(cookieParser());
+
+    auth.setup(app, core);
+
+    // Security protections
+    app.use(helmet.frameguard());
+    app.use(helmet.hidePoweredBy());
+    app.use(helmet.ieNoOpen());
+    app.use(helmet.noSniff());
+    app.use(helmet.xssFilter());
+    app.use(helmet.hsts({
+        maxAge: 31536000,
+        includeSubdomains: true,
+        force: httpsEnabled,
+        preload: true
+    }));
+    app.use(helmet.contentSecurityPolicy({
+        defaultSrc: ['\'none\''],
+        connectSrc: ['*'],
+        scriptSrc: ['\'self\'', '\'unsafe-eval\''],
+        styleSrc: ['\'self\'', 'fonts.googleapis.com', '\'unsafe-inline\''],
+        fontSrc: ['\'self\'', 'fonts.gstatic.com'],
+        mediaSrc: ['\'self\''],
+        objectSrc: ['\'self\''],
+        imgSrc: ['* data:']
+    }));
+
+    var bundles = {};
+    var servePath;
+    if (lambdaEnabled && settings.cdn.url) {
+        servePath = settings.cdn.url + '/dist';
+    } else {
+        servePath = 'media/dist';
+    }
+    app.use(require('connect-assets')({
+        paths: [
+            'media/js',
+            'media/less'
+        ],
+        helperContext: bundles,
+        build: true,
+        bundle: true,
+        compile: true,
+        fingerprinting: true,
+        servePath: servePath
+    }));
+
+    // Public
+    app.use('/media', express.static(__dirname + '/media', {
+        maxAge: '364d'
+    }));
+
+    // Templates
+    var nun = nunjucks.configure('templates', {
+        autoescape: true,
+        express: app,
+        tags: {
+            blockStart: '<%',
+            blockEnd: '%>',
+            variableStart: '<$',
+            variableEnd: '$>',
+            commentStart: '<#',
+            commentEnd: '#>'
+        }
+    });
+
+    function wrapBundler(func) {
+        // This method ensures all assets paths start with "./"
+        // Making them relative, and not absolute
+        return function() {
+            return func.apply(func, arguments)
+                .replace(/href="\//g, 'href="./')
+                .replace(/src="\//g, 'src="./');
+        };
+    }
+
+    nun.addFilter('js', wrapBundler(bundles.js));
+    nun.addFilter('css', wrapBundler(bundles.css));
+    nun.addGlobal('text_search', false);
+
+    // i18n
+    i18n.configure({
+        directory: path.resolve(__dirname, './locales'),
+        locales: settings.i18n.locales || settings.i18n.locale,
+        defaultLocale: settings.i18n.locale
+    });
+    app.use(i18n.init);
+
+    // HTTP Middlewares
+    app.use(bodyParser.json());
+    app.use(bodyParser.urlencoded({
+        extended: true
+    }));
+
+    // IE header
+    app.use(function(req, res, next) {
+        res.setHeader('X-UA-Compatible', 'IE=Edge,chrome=1');
+        next();
+    });
+
+    //
+    // Controllers
+    //
+    _.each(controllers, function(controller) {
+        controller.apply({
+            app: app,
+            sqs: sqs,
+            core: core,
+            settings: settings,
+            middlewares: middlewares,
+            models: models,
+            controllers: controllers
+        });
+    });
+
+    //
+    // Mongoose
+    //
+    function checkForMongoTextSearch() {
+        if (!mongoose.mongo || !mongoose.mongo.Admin) {
+            // MongoDB API has changed, assume text search is enabled
+            nun.addGlobal('text_search', true);
+            return;
+        }
+
+        var admin = new mongoose.mongo.Admin(mongoose.connection.db);
+        admin.buildInfo(function (err, info) {
+            if (err || !info) {
+                return;
+            }
+
+            var version = info.version.split('.');
+            if (version.length < 2) {
+                return;
+            }
+
+            if(version[0] < 2) {
+                return;
+            }
+
+            if(version[0] === '2' && version[1] < 6) {
+                return;
+            }
+
+            nun.addGlobal('text_search', true);
+        });
+    }
+    checkForMongoTextSearch();
+}
 
 //
 // Run server locally
@@ -265,46 +303,20 @@ function runLocalApp() {
     console.log('\n' + art + '\n\n' + 'Release ' + psjon.version.yellow + '\n');
 }
 
-function checkForMongoTextSearch() {
-    if (!mongoose.mongo || !mongoose.mongo.Admin) {
-        // MongoDB API has changed, assume text search is enabled
-        nun.addGlobal('text_search', true);
-        return;
-    }
-
-    var admin = new mongoose.mongo.Admin(mongoose.connection.db);
-    admin.buildInfo(function (err, info) {
-        if (err || !info) {
-            return;
-        }
-
-        var version = info.version.split('.');
-        if (version.length < 2) {
-            return;
-        }
-
-        if(version[0] < 2) {
-            return;
-        }
-
-        if(version[0] === '2' && version[1] < 6) {
-            return;
-        }
-
-        nun.addGlobal('text_search', true);
-    });
-}
-
+var appIsReady = false;
 var mongooseOptions = {
+    useMongoClient: true,
     autoIndex: false,
-    poolSize: 1
+    poolSize: 2
 };
 mongoose.connect(settings.database.uri, mongooseOptions, function(err) {
     if (err) {
         throw err;
     }
 
-    checkForMongoTextSearch();
+    // Finish setting up the app
+    postMongooseSetup();
+    appIsReady = true;
 
     // Start listening if running locally
     if (httpEnabled || httpsEnabled) {
@@ -317,6 +329,14 @@ mongoose.connect(settings.database.uri, mongooseOptions, function(err) {
 //
 if (lambdaEnabled) {
     exports.handler = function (event, context) {
-        awsServerlessExpress.proxy(server, event, context);
+        function handleLambdaRequest() {
+            if (appIsReady) {
+                awsServerlessExpress.proxy(server, event, context);
+            } else {
+                console.log('app not ready, trying again in 100ms');
+                setTimeout(handleLambdaRequest, 100);
+            }
+        }
+        handleLambdaRequest();
     };
 }
