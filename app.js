@@ -41,6 +41,11 @@ var MongoStore = connectMongo(session),
     controllers = all(path.resolve('./app/controllers')),
     app, server, sqs;
 
+// Add these to settings
+settings.lambdaEnabled = lambdaEnabled;
+settings.httpEnabled = httpEnabled;
+settings.httpsEnabled = httpsEnabled;
+
 //
 // express and sqs setup
 //

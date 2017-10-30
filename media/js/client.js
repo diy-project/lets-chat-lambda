@@ -486,7 +486,7 @@
         } else if (event === 'users:update') {
             this.updateUser(data);
         } else if (event === 'files:new') {
-            this.addFile(file);
+            this.addFile(data);
         } else {
             console.log('unknown event', event, data);
         }

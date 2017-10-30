@@ -4,14 +4,13 @@
 
 'use strict';
 
-var settings = require('./../config').rooms;
-
 module.exports = function() {
     var app = this.app,
         sqs = this.sqs,
         core = this.core,
         middlewares = this.middlewares,
         models = this.models,
+        settings = this.settings,
         User = models.user;
 
     core.on('presence:user_join', function(data) {
@@ -137,7 +136,7 @@ module.exports = function() {
             password: req.param('password')
         };
 
-        if (!settings.private) {
+        if (!settings.room.private) {
             options.private = false;
             delete options.password;
         }
@@ -148,7 +147,13 @@ module.exports = function() {
                 return res.status(400).json(err);
             }
 
-            res.status(201).json(room.toJSON(req.user));
+            if (settings.lambdaEnabled) {
+                setTimeout(function() {
+                    res.status(201).json(room.toJSON(req.user));
+                }, settings.lambda.sqsDelay);
+            } else {
+                res.status(201).json(room.toJSON(req.user));
+            }
         });
     };
 
@@ -164,7 +169,7 @@ module.exports = function() {
             user: req.user
         };
 
-        if (!settings.private) {
+        if (!settings.room.private) {
             delete options.password;
             delete options.participants;
         }
@@ -179,7 +184,13 @@ module.exports = function() {
                 return res.sendStatus(404);
             }
 
-            res.json(room.toJSON(req.user));
+            if (settings.lambdaEnabled) {
+                setTimeout(function() {
+                    res.json(room.toJSON(req.user));
+                }, settings.lambda.sqsDelay);
+            } else {
+                res.json(room.toJSON(req.user));
+            }
         });
     };
 
@@ -196,7 +207,13 @@ module.exports = function() {
                 return res.sendStatus(404);
             }
 
-            res.sendStatus(204);
+            if (settings.lambdaEnabled) {
+                setTimeout(function() {
+                    res.sendStatus(204);
+                }, settings.lambda.sqsDelay);
+            } else {
+                res.sendStatus(204);
+            }
         });
     };
 
@@ -242,7 +259,13 @@ module.exports = function() {
             // TODO: fix me!
             // core.presence.join(req.socket.conn, room);
             // req.socket.join(room._id);
-            res.json(room.toJSON(req.user));
+            if (settings.lambdaEnabled) {
+                setTimeout(function() {
+                    res.json(room.toJSON(req.user));
+                }, settings.lambda.sqsDelay);
+            } else {
+                res.json(room.toJSON(req.user));
+            }
         });
     };
 
@@ -254,7 +277,11 @@ module.exports = function() {
         // TODO: fix me!
         // core.presence.leave(req.socket.conn, roomId);
         // req.socket.leave(roomId);
-        res.json();
+        if (settings.lambdaEnabled) {
+            setTimeout(function() {res.json();}, settings.lambda.sqsDelay);
+        } else {
+            res.json();
+        }
     };
 
     var getUsersHandler = function(req, res) {

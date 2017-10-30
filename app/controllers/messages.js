@@ -9,7 +9,8 @@ module.exports = function() {
     var app = this.app,
         sqs = this.sqs,
         core = this.core,
-        middlewares = this.middlewares;
+        middlewares = this.middlewares,
+        settings = this.settings;
 
     core.on('messages:new', function(message, room, user) {
         var msg = message.toJSON();
@@ -59,7 +60,13 @@ module.exports = function() {
             if (err) {
                 return res.sendStatus(400);
             }
-            res.status(201).json(message);
+            if (settings.lambdaEnabled) {
+                setTimeout(function() {
+                    res.status(201).json(message);
+                }, settings.lambda.sqsDelay);
+            } else {
+                res.status(201).json(message);
+            }
         });
     };
 

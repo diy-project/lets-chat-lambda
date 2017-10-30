@@ -4,14 +4,14 @@
 
 'use strict';
 
-var _ = require('lodash'),
-    settings = require('./../config');
+var _ = require('lodash');
 
 module.exports = function() {
 
     var app = this.app,
         core = this.core,
-        middlewares = this.middlewares;
+        middlewares = this.middlewares,
+        settings = this.settings;
 
 
     if (!settings.private.enable) {
@@ -41,7 +41,13 @@ module.exports = function() {
             if (err) {
                 return res.sendStatus(400);
             }
-            res.status(201).json(message);
+            if (settings.lambdaEnabled) {
+                setTimeout(function() {
+                    res.status(201).json(message);
+                }, settings.lambda.sqsDelay);
+            } else {
+                res.status(201).json(message);
+            }
         });
     };
 

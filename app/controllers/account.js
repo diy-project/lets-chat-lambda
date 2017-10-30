@@ -8,8 +8,7 @@ var _ = require('lodash'),
     fs = require('fs'),
     psjon = require('./../../package.json'),
     auth = require('./../auth/index'),
-    path = require('path'),
-    settings = require('./../config');
+    path = require('path');
 
 module.exports = function() {
 
@@ -278,7 +277,13 @@ module.exports = function() {
                             errors: err
                         });
                     }
-                    res.json(user);
+                    if (settings.lambdaEnabled) {
+                        setTimeout(function() {
+                            res.json(user);
+                        }, settings.lambda.sqsDelay);
+                    } else {
+                        res.json(user);
+                    }
                 });
             });
     };

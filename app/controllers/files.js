@@ -4,20 +4,20 @@
 
 'use strict';
 
-var multer = require('multer'),
-    settings = require('./../config').files;
+var multer = require('multer');
 
 module.exports = function() {
-
-    if (!settings.enable) {
-        return;
-    }
 
     var app = this.app,
         sqs = this.sqs,
         core = this.core,
         middlewares = this.middlewares,
-        models = this.models;
+        models = this.models,
+        settings = this.settings;
+
+    if (!settings.files.enable) {
+        return;
+    }
 
     core.on('files:new', function(file, room, user) {
         var fil = file.toJSON();
@@ -30,7 +30,7 @@ module.exports = function() {
     var fileUpload = multer({
         limits: {
             files: 1,
-            fileSize: settings.maxFileSize
+            fileSize: settings.files.maxFileSize
         },
         storage: multer.diskStorage({})
     }).any();
@@ -77,7 +77,13 @@ module.exports = function() {
                 console.error(err);
                 return res.sendStatus(400);
             }
-            res.status(201).json(file);
+            if (settings.lambdaEnabled) {
+                setTimeout(function() {
+                    res.status(201).json(file);
+                }, settings.lambda.sqsDelay);
+            } else {
+                res.status(201).json(file);
+            }
         });
     };
 
@@ -100,7 +106,7 @@ module.exports = function() {
 
             var url = core.files.getUrl(file);
 
-            if (settings.provider === 'local') {
+            if (settings.files.provider === 'local') {
                 res.sendFile(url, {
                     headers: {
                         'Content-Type': file.type,
