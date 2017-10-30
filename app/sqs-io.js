@@ -132,10 +132,11 @@ SqsIo.prototype.queue = function(userId) {
 // Broadcast to a room
 SqsIo.prototype.to = function(room) {
     var that = this;
+    var roomName = room.toString();
     return {
         emit: function(event, data) {
             that._emit({
-                room: room,
+                room: roomName,
                 event: event,
                 data: data
             });
