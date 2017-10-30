@@ -295,7 +295,11 @@ function checkForMongoTextSearch() {
     });
 }
 
-mongoose.connect(settings.database.uri, function(err) {
+var mongooseOptions = {
+    autoIndex: false,
+    poolSize: 1
+};
+mongoose.connect(settings.database.uri, mongooseOptions, function(err) {
     if (err) {
         throw err;
     }
