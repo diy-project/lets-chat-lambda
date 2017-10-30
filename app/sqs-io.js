@@ -185,8 +185,9 @@ SqsIo.prototype._emit = function(params) {
         // Broadcast
         that.listQueues(function (queueUrls) {
             queueUrls.forEach(function (url, index, array) {
-                message.QueueUrl = url;
-                that.sqsApi.sendMessage(message, function (err, data) {
+                var messageCopy = Object.assign({}, message);
+                messageCopy.QueueUrl = url;
+                that.sqsApi.sendMessage(messageCopy, function (err, data) {
                     if (err) {
                         console.log('Error', err);
                     } else {
