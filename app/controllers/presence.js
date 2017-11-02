@@ -37,13 +37,17 @@ module.exports = function() {
                 return;
             }
 
-            // See if the user is connected already
-            var connections = core.presence.system.connections.query({user: userId});
-            if (!connections) {
-                var conn = new SqsIoConnection(user, sqs.queue(userId));
-                core.presence.connect(conn);
-            }
-            res.sendStatus(204);
+            user.lastPresent = new Date();
+            user.save(function(err, user, count) {
+                res.sendStatus(204);
+            });
+            // // See if the user is connected already
+            // var connections = core.presence.system.connections.query({user: userId});
+            // if (!connections) {
+            //     var conn = new SqsIoConnection(user, sqs.queue(userId));
+            //     core.presence.connect(conn);
+            // }
+            // res.sendStatus(204);
         });
     };
 
@@ -51,11 +55,25 @@ module.exports = function() {
         var userId = req.user._id;
 
         // Remove active connections
-        var connections = core.presence.system.connections.query({user: userId});
-        connections.forEach(function(conn) {
-            core.presence.system.connections.remove(conn);
-        });
+        // var connections = core.presence.system.connections.query({user: userId});
+        // connections.forEach(function(conn) {
+        //     core.presence.system.connections.remove(conn);
+        // });
         res.sendStatus(204);
+
+        // TODO: this may not be needed
+        // User.findById(userId, function(err, user) {
+        //     if (err) {
+        //         console.error(err);
+        //         res.sendStatus(404);
+        //         return;
+        //     }
+        //
+        //     user.lastPresent = new Date();
+        //     user.save(function (err, user, count) {
+        //         res.sendStatus(204);
+        //     });
+        // });
     };
 
     app.route('/presence')

@@ -1,17 +1,19 @@
 'use strict';
 
-var Connection = require('./presence/connection'),
-    Room = require('./presence/room'),
-    ConnectionCollection = require('./presence/connection-collection'),
+var mongoose = require('mongoose'),
+    Connection = require('./presence/connection'),
+    LocalRoom = require('./presence/room'),
+    LocalConnectionCollection = require('./presence/connection-collection'),
     RoomCollection = require('./presence/room-collection'),
     UserCollection = require('./presence/user-collection');
 
 function PresenceManager(options) {
     this.core = options.core;
-    this.system = new Room({ system: true });
-    this.connections = new ConnectionCollection();
+    this.system = new LocalRoom({ system: true });
+    this.connections = new LocalConnectionCollection();
     this.rooms = new RoomCollection();
     this.users = new UserCollection({ core: this.core });
+
     this.rooms.on('user_join', this.onJoin.bind(this));
     this.rooms.on('user_leave', this.onLeave.bind(this));
 
@@ -20,14 +22,18 @@ function PresenceManager(options) {
     this.getUsersForRoom = this.getUsersForRoom.bind(this);
 }
 
-PresenceManager.prototype.getUserCountForRoom = function(roomId) {
-    var room = this.rooms.get(roomId);
-    return room ? room.userCount : 0;
+PresenceManager.prototype.getUserCountForRoom = function(roomId, callback) {
+    var Room = mongoose.model('Room');
+    Room.findByIdOrSlug(roomId, function(room) {
+        callback(room.participants.length);
+    });
 };
 
-PresenceManager.prototype.getUsersForRoom = function(roomId) {
-    var room = this.rooms.get(roomId);
-    return room ? room.getUsers() : [];
+PresenceManager.prototype.getUsersForRoom = function(roomId, callback) {
+    var Room = mongoose.model('Room');
+    Room.findByIdOrSlug(roomId, function (room) {
+        callback(room.participants);
+    });
 };
 
 PresenceManager.prototype.connect = function(connection) {

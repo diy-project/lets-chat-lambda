@@ -82,17 +82,21 @@ var UserSchema = new mongoose.Schema({
         type: Date,
         default: Date.now
     },
+    lastPresent: {
+        type: Date,
+        default: Date.now
+    },
     status: {
         type: String,
         trim: true
     },
     rooms: [{
 		type: ObjectId,
-		ref: 'Room' 
+		ref: 'Room'
     }],
     openRooms: [{
-      		type: String,
-                trim: true
+        type: String,
+        trim: true
     }],
 	messages: [{
 		type: ObjectId,

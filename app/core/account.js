@@ -41,9 +41,9 @@ AccountManager.prototype.update = function(id, options, cb) {
         }
 
         if (options.openRooms) {
-          user.openRooms = options.openRooms;
+            user.openRooms = options.openRooms;
         }
-        
+
         if (options.username && options.username !== user.username) {
             var xmppConns = this.core.presence.system.connections.query({
                 userId: user._id,

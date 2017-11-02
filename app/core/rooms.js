@@ -211,12 +211,14 @@ RoomManager.prototype.list = function(options, cb) {
 
 RoomManager.prototype.sanitizeRoom = function(options, room) {
     var authorized = options.userId && room.isAuthorized(options.userId);
-
+    console.log('foo', room.participants);
     if (options.users) {
         if (authorized) {
+            console.log('hello');
             room.users = this.core.presence
                         .getUsersForRoom(room.id.toString());
         } else {
+            console.log('bar');
             room.users = [];
         }
     }
@@ -225,7 +227,8 @@ RoomManager.prototype.sanitizeRoom = function(options, room) {
 RoomManager.prototype.findOne = function(options, cb) {
     var Room = mongoose.model('Room');
     Room.findOne(options.criteria)
-        .populate('participants').exec(function(err, room) {
+        // .populate('participants')
+        .exec(function(err, room) {
 
         if (err) {
             return cb(err);
