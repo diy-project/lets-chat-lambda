@@ -264,8 +264,6 @@ module.exports = function() {
                     return res.sendStatus(404);
                 }
 
-                // core.presence.join(req.socket.conn, room);
-                // req.socket.join(room._id);
                 var roomId = room._id.toString();
                 core.rooms.get(roomId, function (err, room) {
                     if (err) {
@@ -283,6 +281,8 @@ module.exports = function() {
                     user.save();
                     room.save();
 
+                    // Announce that the user has joined
+                    core.presence.join(user, room);
                     if (settings.lambdaEnabled) {
                         setTimeout(function () {
                             res.json(room.toJSON(req.user));
@@ -301,9 +301,6 @@ module.exports = function() {
         var userId = user.id;
 
         core.users.get(userId, function(err, user) {
-            // TODO: fix me!
-            // core.presence.leave(req.socket.conn, roomId);
-            // req.socket.leave(roomId);
             if (err) {
                 console.error(err);
                 return res.sendStatus(400);
@@ -321,6 +318,8 @@ module.exports = function() {
                 if (!room) {
                     return res.sendStatus(404);
                 }
+                // Announce that the user has left
+                core.presence.leave(user, room);
 
                 // Modify the DB
                 user.rooms.pull({_id: roomId});
@@ -354,8 +353,6 @@ module.exports = function() {
             }
 
             var users = room.participants;
-            console.log(users);
-            // TODO: does this leak info?
             res.json(users);
         });
     };

@@ -211,14 +211,12 @@ RoomManager.prototype.list = function(options, cb) {
 
 RoomManager.prototype.sanitizeRoom = function(options, room) {
     var authorized = options.userId && room.isAuthorized(options.userId);
-    console.log('foo', room.participants);
     if (options.users) {
         if (authorized) {
-            console.log('hello');
+            // TODO: fix me
             room.users = this.core.presence
                         .getUsersForRoom(room.id.toString());
         } else {
-            console.log('bar');
             room.users = [];
         }
     }

@@ -56,26 +56,31 @@ util.inherits(Core, EventEmitter);
 
 Core.prototype.onAccountUpdated = function(data) {
     var userId = data.user.id.toString();
-    var user = this.presence.users.get(userId);
+    this.users.get(userId, function (err, user) {
+        if (err) {
+            console.error(err);
+            return;
+        }
 
-    if (!user) {
-        return;
-    }
+        if (!user) {
+            return;
+        }
 
-    var new_data = {
-        userId: userId,
-        oldUsername: user.username,
-        username: data.user.username
-    };
+        var new_data = {
+            userId: userId,
+            oldUsername: user.username,
+            username: data.user.username
+        };
 
-    if (user) {
-        _.assign(user, data.user, { id: userId });
-    }
+        if (user) {
+            _.assign(user, data.user, { id: userId });
+        }
 
-    if (data.usernameChanged) {
-        // Emit to all rooms, that this user has changed their username
-        this.presence.rooms.usernameChanged(new_data);
-    }
+        if (data.usernameChanged) {
+            // Emit to all rooms, that this user has changed their username
+            this.presence.usernameChanged(user.rooms, new_data);
+        }
+    });
 };
 
 module.exports = new Core();
