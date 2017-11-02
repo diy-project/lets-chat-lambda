@@ -136,7 +136,7 @@ module.exports = function() {
             password: req.param('password')
         };
 
-        if (!settings.private || !settings.private.enabled) {
+        if (!settings.rooms.private) {
             options.private = false;
             delete options.password;
         }
@@ -158,7 +158,8 @@ module.exports = function() {
     };
 
     var updateRoomHandler = function(req, res) {
-        var roomId = req.param('room') || req.param('id');
+        var roomId = req.param('room');
+        console.log('Update', roomId);
 
         var options = {
             name: req.param('name'),
@@ -169,7 +170,7 @@ module.exports = function() {
             user: req.user
         };
 
-        if (!settings.room.private) {
+        if (!settings.rooms.private) {
             delete options.password;
             delete options.participants;
         }
@@ -195,7 +196,7 @@ module.exports = function() {
     };
 
     var archiveRoomHandler = function(req, res) {
-        var roomId = req.param('room') || req.param('id');
+        var roomId = req.param('room');
 
         core.rooms.archive(roomId, function(err, room) {
             if (err) {

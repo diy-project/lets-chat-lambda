@@ -102,7 +102,7 @@
     };
     Client.prototype.updateRoom = function(room) {
         $.ajax({
-            url: '/room/' + room.id,
+            url: '/rooms/' + room.id,
             type: 'PUT',
             data: room
         });
@@ -123,6 +123,7 @@
         return this.rooms.add(room);
     };
     Client.prototype.archiveRoom = function(options) {
+        console.log(options);
         var archiveRoomCB = function(data) {
             if (data !== 'No Content') {
                 swal('Unable to Archive!',
@@ -131,9 +132,8 @@
             }
         };
         $.ajax({
-            url: '/room/' + room.id,
+            url: '/rooms/' + options.room,
             type: 'DELETE',
-            data: options,
             success: archiveRoomCB
         });
     };
