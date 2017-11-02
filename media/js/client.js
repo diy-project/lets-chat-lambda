@@ -124,17 +124,18 @@
     };
     Client.prototype.archiveRoom = function(options) {
         console.log(options);
-        var archiveRoomCB = function(data) {
-            if (data !== 'No Content') {
-                swal('Unable to Archive!',
-                    'Unable to archive this room!',
-                    'error');
-            }
+        var archiveRoomCB = function(resp, text, err) {
+            console.log(resp, text, err);
+            // if (data !== 'No Content') {
+            //     swal('Unable to Archive!',
+            //         'Unable to archive this room!',
+            //         'error');
+            // }
         };
         $.ajax({
             url: '/rooms/' + options.room,
             type: 'DELETE',
-            success: archiveRoomCB
+            error: archiveRoomCB
         });
     };
     Client.prototype.roomArchive = function(room) {
@@ -191,18 +192,6 @@
                 return;
             }
 
-            if (resRoom && resRoom.errors &&
-                resRoom.errors === 'password required') {
-
-                that.passwordModal.show({
-                    roomName: resRoom.roomName,
-                    callback: passwordCB
-                });
-
-                that.unlockJoin(id);
-                return;
-            }
-
             if (resRoom && resRoom.errors) {
                 that.unlockJoin(id);
                 return;
@@ -256,11 +245,32 @@
             that.unlockJoin(id);
         };
 
+        var joinRoomErrorCB = function(res, text, err) {
+            var resRoom = res.responseJSON;
+            if (resRoom && resRoom.errors &&
+                resRoom.errors === 'password required') {
+
+                that.passwordModal.show({
+                    roomName: resRoom.roomName,
+                    callback: passwordCB
+                });
+
+                that.unlockJoin(id);
+                return;
+            }
+
+            if (resRoom && resRoom.errors) {
+                that.unlockJoin(id);
+                return;
+            }
+        };
+
         $.ajax({
             url: '/rooms/' + room.id + '/users/me',
             type: 'PUT',
             data: {roomId: id, password: password},
-            success: joinRoomCB
+            success: joinRoomCB,
+            error: joinRoomErrorCB
         });
     };
     Client.prototype.leaveRoom = function(id) {
