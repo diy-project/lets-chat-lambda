@@ -124,18 +124,21 @@
     };
     Client.prototype.archiveRoom = function(options) {
         console.log(options);
-        var archiveRoomCB = function(resp, text, err) {
-            console.log(resp, text, err);
-            // if (data !== 'No Content') {
-            //     swal('Unable to Archive!',
-            //         'Unable to archive this room!',
-            //         'error');
-            // }
+        var archiveRoomCB = function(data) {
+            if (data !== 'No Content') {
+                swal('Unable to Archive!',
+                    'Unable to archive this room!',
+                    'error');
+            }
+        };
+        var archiveRoomErrorCB = function(res, text, err) {
+            archiveRoomCB(res.responseJSON);
         };
         $.ajax({
             url: '/rooms/' + options.room,
             type: 'DELETE',
-            error: archiveRoomCB
+            success: archiveRoomCB,
+            error: archiveRoomErrorCB
         });
     };
     Client.prototype.roomArchive = function(room) {
