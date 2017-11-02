@@ -13,6 +13,7 @@ module.exports = function() {
         express = require('express');
 
     var app = this.app,
+        settings = this.settings,
         middlewares = this.middlewares;
 
     var getEmotesListHandler = function(req, res) {
@@ -37,12 +38,19 @@ module.exports = function() {
                     fileName
                 );
 
-                var imgDir = 'extras/emotes/' +
-                    fileName.replace('.yml', '') + '/';
+                var imgDir;
+                if (settings.cdn && settings.cdn.url) {
+                    imgDir = settings.cdn.url + '/emotes/' +
+                        fileName.replace('.yml', '') + '/';
+                } else {
+                    imgDir = 'extras/emotes/' +
+                        fileName.replace('.yml', '') + '/';
+                }
 
                 var file = fs.readFileSync(fullpath, 'utf8');
                 var data = yaml.safeLoad(file);
                 _.each(data, function (emote) {
+                    console.log(emote.image);
                     emote.image = imgDir + emote.image;
                     emotes.push(emote);
                 });
@@ -69,7 +77,7 @@ module.exports = function() {
     app.get('/extras/emotes', middlewares.requireLogin, getEmotesListHandler);
 
     app.use('/extras/emotes/',
-        express.static(path.join(process.cwd(), 'extras/emotes/public'), {
+        express.static(path.join(process.cwd(), 'media/emotes'), {
             maxage: '364d'
         })
     );
