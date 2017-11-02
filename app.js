@@ -152,13 +152,7 @@ function postMongooseSetup() {
     }));
 
     var bundles = {};
-    var servePath;
-    if (lambdaEnabled && settings.cdn.url) {
-        servePath = settings.cdn.url + '/dist';
-    } else {
-        servePath = 'media/dist';
-    }
-    app.use(require('connect-assets')({
+    var connectAssetsOptions = {
         paths: [
             'media/js',
             'media/less'
@@ -167,9 +161,14 @@ function postMongooseSetup() {
         build: true,
         bundle: true,
         compile: true,
-        fingerprinting: true,
-        servePath: servePath
-    }));
+        fingerprinting: true
+    };
+    if (lambdaEnabled && settings.cdn.enabled) {
+        connectAssetsOptions.servePath = settings.cdn.url + '/dist';
+    } else {
+        connectAssetsOptions.servePath = 'media/dist';
+    }
+    app.use(require('connect-assets')(connectAssetsOptions));
 
     // Public
     app.use('/media', express.static(__dirname + '/media', {

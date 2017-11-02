@@ -50,7 +50,6 @@ module.exports = function() {
                 var file = fs.readFileSync(fullpath, 'utf8');
                 var data = yaml.safeLoad(file);
                 _.each(data, function (emote) {
-                    console.log(emote.image);
                     emote.image = imgDir + emote.image;
                     emotes.push(emote);
                 });
