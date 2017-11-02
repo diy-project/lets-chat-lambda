@@ -1,62 +1,73 @@
 'use strict';
 
-var Connection = require('./presence/connection'),
-    Room = require('./presence/room'),
-    ConnectionCollection = require('./presence/connection-collection'),
-    RoomCollection = require('./presence/room-collection'),
-    UserCollection = require('./presence/user-collection');
+var mongoose = require('mongoose');
 
 function PresenceManager(options) {
     this.core = options.core;
-    this.system = new Room({ system: true });
-    this.connections = new ConnectionCollection();
-    this.rooms = new RoomCollection();
-    this.users = new UserCollection({ core: this.core });
-    this.rooms.on('user_join', this.onJoin.bind(this));
-    this.rooms.on('user_leave', this.onLeave.bind(this));
-
-    this.connect = this.connect.bind(this);
     this.getUserCountForRoom = this.getUserCountForRoom.bind(this);
     this.getUsersForRoom = this.getUsersForRoom.bind(this);
 }
 
-PresenceManager.prototype.getUserCountForRoom = function(roomId) {
-    var room = this.rooms.get(roomId);
-    return room ? room.userCount : 0;
+PresenceManager.prototype.getUserCountForRoom = function(roomId, callback) {
+    var Room = mongoose.model('Room');
+    Room.findByIdOrSlug(roomId, function(room) {
+        callback(room.participants.length);
+    });
 };
 
-PresenceManager.prototype.getUsersForRoom = function(roomId) {
-    var room = this.rooms.get(roomId);
-    return room ? room.getUsers() : [];
+PresenceManager.prototype.getUsersForRoom = function(roomId, callback) {
+    var Room = mongoose.model('Room');
+    Room.findByIdOrSlug(roomId, function (room) {
+        callback(room.participants);
+    });
 };
 
 PresenceManager.prototype.connect = function(connection) {
-    this.system.addConnection(connection);
-    this.core.emit('connect', connection);
-
-    connection.user = this.users.getOrAdd(connection.user);
-
-    connection.on('disconnect', function() {
-        this.disconnect(connection);
-    }.bind(this));
+    throw new Exception('Not supported');
 };
 
 PresenceManager.prototype.disconnect = function(connection) {
-    this.system.removeConnection(connection);
-    this.core.emit('disconnect', connection);
-    this.rooms.removeConnection(connection);
+    throw new Exception('Not supported');
 };
 
-PresenceManager.prototype.join = function(connection, room) {
-    var pRoom = this.rooms.getOrAdd(room);
-    pRoom.addConnection(connection);
+PresenceManager.prototype.join = function(user, room) {
+    this.onJoin({
+        userId: user._id,
+        username: user.username,
+        roomId: room._id,
+        roomSlug: room.slug,
+        roomHasPassword: typeof room.password !== 'undefined'
+    });
 };
 
-PresenceManager.prototype.leave = function(connection, roomId) {
-    var room = this.rooms.get(roomId);
-    if (room) {
-        room.removeConnection(connection);
-    }
+PresenceManager.prototype.leave = function(user, room) {
+    this.onLeave({
+        userId: user._id,
+        username: user.username,
+        roomId: room._id,
+        roomSlug: room.slug,
+        roomHasPassword: typeof room.password !== 'undefined'
+    });
+};
+
+PresenceManager.prototype.usernameChanged = function(rooms, data) {
+    var that = this;
+    rooms.forEach(function(room) {
+        that.onLeave({
+            userId: user._id,
+            username: data.oldUsername,
+            roomId: room._id,
+            roomSlug: room.slug,
+            roomHasPassword: typeof room.password !== 'undefined'
+        });
+        that.onJoin({
+            userId: user._id,
+            username: data.username,
+            roomId: room._id,
+            roomSlug: room.slug,
+            roomHasPassword: typeof room.password !== 'undefined'
+        });
+    });
 };
 
 PresenceManager.prototype.onJoin = function(data) {
@@ -67,5 +78,4 @@ PresenceManager.prototype.onLeave = function(data) {
     this.core.emit('presence:user_leave', data);
 };
 
-PresenceManager.Connection = Connection;
 module.exports = PresenceManager;

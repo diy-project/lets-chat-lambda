@@ -13,8 +13,10 @@ module.exports = function() {
         User = models.user;
 
     var listUsersHandler = function(req, res) {
+        var isActive = req.param('isActive') === 'true';
+
         var options = {
-            skip: req.param('skip'),
+            skip: parseInt(req.param('skip')),
             take: parseInt(req.param('take'))
         };
 
@@ -24,7 +26,19 @@ module.exports = function() {
                 return res.status(400).json(err);
             }
 
-            res.json(users);
+            if (isActive) {
+                var currentTime = new Date().getTime();
+                res.json(users.filter(function(user) {
+                    if (user.lastPresent) {
+                        // Only return users who have been present in the last 2 minutes
+                        return 2 * 1000 > currentTime - user.lastPresent.getTime();
+                    } else {
+                        return false;
+                    }
+                }))
+            } else {
+                res.json(users);
+            }
         });
     };
 

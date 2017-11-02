@@ -41,20 +41,10 @@ AccountManager.prototype.update = function(id, options, cb) {
         }
 
         if (options.openRooms) {
-          user.openRooms = options.openRooms;
+            user.openRooms = options.openRooms;
         }
-        
+
         if (options.username && options.username !== user.username) {
-            var xmppConns = this.core.presence.system.connections.query({
-                userId: user._id,
-                type: 'xmpp'
-            });
-
-            if (xmppConns.length) {
-                return cb(null, null, 'You can not change your username ' +
-                          'with active XMPP sessions.');
-            }
-
             usernameChange = true;
             user.username = options.username;
         }
