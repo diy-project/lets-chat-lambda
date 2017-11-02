@@ -50,7 +50,11 @@ module.exports = function() {
                 var file = fs.readFileSync(fullpath, 'utf8');
                 var data = yaml.safeLoad(file);
                 _.each(data, function (emote) {
-                    emote.image = imgDir + emote.image;
+                    if (settings.cdn.enabled) {
+                        emote.image = imgDir + encodeURIComponent(emote.image);
+                    } else {
+                        emote.image = imgDir + emote.image;
+                    }
                     emotes.push(emote);
                 });
             });
