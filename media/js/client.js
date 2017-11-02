@@ -124,15 +124,15 @@
     };
     Client.prototype.archiveRoom = function(options) {
         console.log(options);
-        var archiveRoomCB = function(data) {
-            if (data !== 'No Content') {
+        var archiveRoomCB = function(data, text, xhr) {
+            if (xhr.status != 204) {
                 swal('Unable to Archive!',
                     'Unable to archive this room!',
                     'error');
             }
         };
-        var archiveRoomErrorCB = function(res, text, err) {
-            archiveRoomCB(res.responseJSON);
+        var archiveRoomErrorCB = function(xhr, text, err) {
+            archiveRoomCB(xhr.status);
         };
         $.ajax({
             url: '/rooms/' + options.room,
