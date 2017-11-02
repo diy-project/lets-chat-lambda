@@ -43,16 +43,10 @@ module.exports = function() {
 
     var getEmitters = function(room) {
         if (room.private && !room.hasPassword) {
-            var connections = core.presence.connections.query({
-                type: 'sqs.io'
-            }).filter(function(connection) {
-                return room.isAuthorized(connection.user);
-            });
-
-            return connections.map(function(connection) {
+            return room.participants.map(function(user) {
                 return {
-                    emitter: connection.socket,
-                    user: connection.user
+                    emitter: sqs.queue(user._id),
+                    user: user
                 };
             });
         }

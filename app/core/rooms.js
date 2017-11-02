@@ -225,7 +225,7 @@ RoomManager.prototype.sanitizeRoom = function(options, room) {
 RoomManager.prototype.findOne = function(options, cb) {
     var Room = mongoose.model('Room');
     Room.findOne(options.criteria)
-        // .populate('participants')
+        .populate('participants')
         .exec(function(err, room) {
 
         if (err) {

@@ -173,7 +173,7 @@ SqsIo.prototype._emit = function(params) {
     };
     if (params.url) {
         // Unicast
-        message.QueueUrl = url;
+        message.QueueUrl = params.url;
         that.sqsApi.sendMessage(message, function (err, data) {
             if (err) {
                 console.log('Error', err);
