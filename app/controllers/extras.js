@@ -39,7 +39,7 @@ module.exports = function() {
                 );
 
                 var imgDir;
-                if (settings.cdn && settings.cdn.url) {
+                if (settings.cdn.enabled) {
                     imgDir = settings.cdn.url + '/emotes/' +
                         fileName.replace('.yml', '') + '/';
                 } else {
@@ -76,11 +76,13 @@ module.exports = function() {
     //
     app.get('/extras/emotes', middlewares.requireLogin, getEmotesListHandler);
 
-    app.use('/extras/emotes/',
-        express.static(path.join(process.cwd(), 'media/emotes'), {
-            maxage: '364d'
-        })
-    );
+    if (!settings.cdn.enabled) {
+        app.use('/extras/emotes/',
+            express.static(path.join(process.cwd(), 'media/emotes'), {
+                maxage: '364d'
+            })
+        );
+    }
 
     app.get('/extras/replacements', middlewares.requireLogin, getReplacementsListHandler);
 

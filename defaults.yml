@@ -22,6 +22,7 @@ lambda:
   sqsDelay: 500
 
 cdn:
+  enabled: false
   url:
 
 database:

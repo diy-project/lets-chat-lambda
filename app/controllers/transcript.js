@@ -22,9 +22,8 @@ module.exports = function() {
                 return res.sendStatus(404);
             }
 
-            // Hack since API gateway mauls binary data
             var assetUrl;
-            if (settings.cdn && settings.cdn.url) {
+            if (settings.cdn.enabled) {
                 assetUrl = settings.cdn.url;
             } else {
                 assetUrl = './media';

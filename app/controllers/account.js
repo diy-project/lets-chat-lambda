@@ -24,7 +24,7 @@ module.exports = function() {
 
     // Hack since API gateway mauls binary data
     var assetUrl;
-    if (settings.cdn && settings.cdn.url) {
+    if (settings.cdn.enabled) {
         assetUrl = settings.cdn.url;
     } else {
         assetUrl = './media';
@@ -46,7 +46,7 @@ module.exports = function() {
         }).sample().value();
         // Hack since API gateway mauls binary data
         var assetUrl;
-        if (settings.cdn && settings.cdn.url) {
+        if (settings.cdn.enabled) {
             assetUrl = settings.cdn.url;
         } else {
             assetUrl = './media';
