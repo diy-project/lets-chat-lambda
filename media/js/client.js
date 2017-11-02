@@ -552,7 +552,7 @@
                 _.each(that.rooms.where({ joined: true }), function(room) {
                     that.rejoinRoom(room);
                 });
-            }, 4 * 60 * 1000);
+            }, 60 * 1000); // Every minute
 
             that.getSqsUrl();
             that.refreshSqsClient();
