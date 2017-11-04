@@ -8,17 +8,17 @@ function PresenceManager(options) {
     this.getUsersForRoom = this.getUsersForRoom.bind(this);
 }
 
-PresenceManager.prototype.getUserCountForRoom = function(roomId, callback) {
+PresenceManager.prototype.getUserCountForRoom = function(roomId, cb) {
     var Room = mongoose.model('Room');
     Room.findByIdOrSlug(roomId, function(room) {
-        callback(room.participants.length);
+        cb(room.participants.length);
     });
 };
 
-PresenceManager.prototype.getUsersForRoom = function(roomId, callback) {
+PresenceManager.prototype.getUsersForRoom = function(roomId, cb) {
     var Room = mongoose.model('Room');
     Room.findByIdOrSlug(roomId, function (room) {
-        callback(room.participants);
+        cb(room.participants);
     });
 };
 
@@ -31,23 +31,23 @@ PresenceManager.prototype.disconnect = function(connection) {
 };
 
 PresenceManager.prototype.join = function(user, room) {
-    this.onJoin({
+    return {
         userId: user._id,
         username: user.username,
         roomId: room._id,
         roomSlug: room.slug,
         roomHasPassword: typeof room.password !== 'undefined'
-    });
+    };
 };
 
 PresenceManager.prototype.leave = function(user, room) {
-    this.onLeave({
+    return {
         userId: user._id,
         username: user.username,
         roomId: room._id,
         roomSlug: room.slug,
         roomHasPassword: typeof room.password !== 'undefined'
-    });
+    };
 };
 
 PresenceManager.prototype.usernameChanged = function(rooms, data) {

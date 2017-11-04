@@ -18,17 +18,20 @@ module.exports = function() {
         return;
     }
 
-    core.on('user-messages:new', function(message) {
+    function onNew(message, user, owner, cb) {
         _.each(message.users, function(userId) {
-            var connections = core.presence.system.connections.query({
-                type: 'sqs.io', userId: userId.toString()
-            });
+            // TODO: this is not used
 
-            _.each(connections, function(connection) {
-                connection.queue.emit('user-messages:new', message);
-            });
+            // var connections = core.presence.system.connections.query({
+            //     type: 'sqs.io', userId: userId.toString()
+            // });
+
+            // _.each(connections, function(connection) {
+            //     connection.queue.emit('user-messages:new', message);
+            // });
         });
-    });
+        cb();
+    }
 
     var createUserMessageHandler = function(req, res) {
         var options = {
@@ -37,17 +40,14 @@ module.exports = function() {
             text: req.param('text')
         };
 
-        core.usermessages.create(options, function(err, message) {
+        core.usermessages.create(options, function(err, message, user, owner) {
             if (err) {
                 return res.sendStatus(400);
             }
-            if (settings.lambdaEnabled) {
-                setTimeout(function() {
-                    res.status(201).json(message);
-                }, settings.lambda.sqsDelay);
-            } else {
+
+            onNew(message, user, owner, function() {
                 res.status(201).json(message);
-            }
+            });
         });
     };
 

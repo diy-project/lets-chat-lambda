@@ -9,16 +9,16 @@ module.exports = function() {
     var app = this.app,
         sqs = this.sqs,
         core = this.core,
-        middlewares = this.middlewares,
-        settings = this.settings;
+        middlewares = this.middlewares;
 
-    core.on('messages:new', function(message, room, user) {
+    function onNew(message, room, user, cb) {
         var msg = message.toJSON();
         msg.owner = user;
         msg.room = room.toJSON(user);
 
-        sqs.to(room.id).emit('messages:new', msg);
-    });
+        var promise = sqs.to(room.id).emit('messages:new', msg);
+        sqs.wait(promise, cb);
+    }
 
     var listMessagesHandler = function(req, res) {
         var options = {
@@ -56,17 +56,13 @@ module.exports = function() {
             text: req.param('text')
         };
 
-        core.messages.create(options, function(err, message) {
+        core.messages.create(options, function(err, message, room, user) {
             if (err) {
                 return res.sendStatus(400);
             }
-            if (settings.lambdaEnabled) {
-                setTimeout(function() {
-                    res.status(201).json(message);
-                }, settings.lambda.sqsDelay);
-            } else {
+            onNew(message, room, user, function() {
                 res.status(201).json(message);
-            }
+            });
         });
     };
 

@@ -65,9 +65,7 @@ RoomManager.prototype.create = function(options, cb) {
         }
 
         if (cb) {
-            room = room;
             cb(null, room);
-            this.core.emit('rooms:new', room);
         }
     }.bind(this));
 };
@@ -112,9 +110,7 @@ RoomManager.prototype.update = function(roomId, options, cb) {
                     console.error(err);
                     return cb(err);
                 }
-                room = room;
                 cb(null, room);
-                this.core.emit('rooms:update', room);
             }.bind(this));
         }.bind(this));
     }.bind(this));
@@ -141,8 +137,6 @@ RoomManager.prototype.archive = function(roomId, cb) {
                 return cb(err);
             }
             cb(null, room);
-            this.core.emit('rooms:archive', room);
-
         }.bind(this));
     }.bind(this));
 };

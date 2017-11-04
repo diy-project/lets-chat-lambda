@@ -19,13 +19,14 @@ module.exports = function() {
         return;
     }
 
-    core.on('files:new', function(file, room, user) {
+    function onNew(file, room, user, cb) {
         var fil = file.toJSON();
         fil.owner = user;
         fil.room = room.toJSON(user);
 
-        sqs.to(room._id).emit('files:new', fil);
-    });
+        var promise = sqs.to(room._id).emit('files:new', fil);
+        sqs.wait(promise, cb);
+    }
 
     var fileUpload = multer({
         limits: {
@@ -72,18 +73,14 @@ module.exports = function() {
             post: (req.param('post') === 'true') && true
         };
 
-        core.files.create(options, function(err, file) {
+        core.files.create(options, function(err, file, room, user) {
             if (err) {
                 console.error(err);
                 return res.sendStatus(400);
             }
-            if (settings.lambdaEnabled) {
-                setTimeout(function() {
-                    res.status(201).json(file);
-                }, settings.lambda.sqsDelay);
-            } else {
+            onNew(file, room, user, function() {
                 res.status(201).json(file);
-            }
+            });
         });
     };
 

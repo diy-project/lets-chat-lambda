@@ -21,8 +21,6 @@ UserMessageManager.prototype.onMessageCreated = function(message, user, options,
         if (cb) {
             cb(null, message, user, owner);
         }
-
-        this.core.emit('user-messages:new', message, user, owner, options.data);
     }.bind(this));
 };
 

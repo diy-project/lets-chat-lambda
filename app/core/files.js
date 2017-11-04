@@ -83,10 +83,6 @@ FileManager.prototype.create = function(options, cb) {
                         return cb(err);
                     }
 
-                    cb(null, savedFile, room, user);
-
-                    this.core.emit('files:new', savedFile, room, user);
-
                     if (options.post) {
                         this.core.messages.create({
                             room: room,
@@ -94,6 +90,8 @@ FileManager.prototype.create = function(options, cb) {
                             text: 'upload://' + savedFile.url
                         });
                     }
+
+                    cb(null, savedFile, room, user);
                 }.bind(this));
             }.bind(this));
         }.bind(this));

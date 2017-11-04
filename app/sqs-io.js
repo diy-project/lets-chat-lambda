@@ -31,18 +31,18 @@ function SqsIo(settings) {
     );
 }
 
-SqsIo.prototype.listQueues = function(callback) {
+SqsIo.prototype.listQueues = function(cb) {
     var params = {QueueNamePrefix: this.queuePrefix};
     this.sqsApi.listQueues(params, function(err, data) {
         if (err) {
             console.log(err, err.stack);
         } else {
-            callback(data.QueueUrls ? data.QueueUrls : []);
+            cb(data.QueueUrls ? data.QueueUrls : []);
         }
     });
 };
 
-SqsIo.prototype.createQueue = function(userId, callback) {
+SqsIo.prototype.createQueue = function(userId, cb) {
     var params = {
         QueueName: this.queuePrefix + '_' + userId,
         Attributes: {
@@ -58,8 +58,8 @@ SqsIo.prototype.createQueue = function(userId, callback) {
         } else {
             console.log('Created queue:', data.QueueUrl);
         }
-        if (callback) {
-            callback(err);
+        if (cb) {
+            cb(err);
         }
     });
 };
@@ -78,7 +78,7 @@ SqsIo.prototype.deleteQueue = function(userId) {
     });
 };
 
-SqsIo.prototype.getUrl = function(userId, callback) {
+SqsIo.prototype.getUrl = function(userId, cb) {
     var params = {
         QueueName: this.queuePrefix + '_' + userId
     };
@@ -86,12 +86,12 @@ SqsIo.prototype.getUrl = function(userId, callback) {
         if (err) {
             console.log('Error', err);
         } else {
-            callback(queueData.QueueUrl);
+            cb(queueData.QueueUrl);
         }
     });
 };
 
-SqsIo.prototype.getTemporaryCredentials = function(callback) {
+SqsIo.prototype.getTemporaryCredentials = function(cb) {
     // Refresh the credentials now that someone has requested them
     var that = this;
     this.tempClientCredentials.refresh(function(err) {
@@ -99,7 +99,7 @@ SqsIo.prototype.getTemporaryCredentials = function(callback) {
             console.log('Error', err);
         } else {
             var temp = that.tempClientCredentials;
-            callback({
+            cb({
                 accessKeyId: temp.accessKeyId,
                 secretAccessKey: temp.secretAccessKey,
                 sessionToken: temp.sessionToken,
@@ -116,7 +116,7 @@ SqsIo.prototype.queue = function(userId) {
     return {
         emit: function(event, messageData) {
             that.getUrl(userId, function (url) {
-                that._emit({
+                return that._emit({
                     url: url,
                     event: event,
                     data: messageData
@@ -135,7 +135,7 @@ SqsIo.prototype.to = function(room) {
     var roomName = room.toString();
     return {
         emit: function(event, data) {
-            that._emit({
+            return that._emit({
                 room: roomName,
                 event: event,
                 data: data
@@ -146,7 +146,7 @@ SqsIo.prototype.to = function(room) {
 
 // Broadcast
 SqsIo.prototype.emit = function(event, data) {
-    this._emit({
+    return this._emit({
         event: event,
         data: data
     });
@@ -155,6 +155,12 @@ SqsIo.prototype.emit = function(event, data) {
 // Internal emit method
 SqsIo.prototype._emit = function(params) {
     var that = this;
+    var promise = {
+        _done: false,
+        isDone: function () {
+            return this._done;
+        }
+    };
     var messageAttributes = {
         'Event': {
             DataType: 'String',
@@ -176,25 +182,53 @@ SqsIo.prototype._emit = function(params) {
         message.QueueUrl = params.url;
         that.sqsApi.sendMessage(message, function (err, data) {
             if (err) {
-                console.log('Error', err);
+                console.error(err);
             } else {
                 console.log('Sent', data.MessageId, 'to', url);
             }
+            promise.done = true;
         });
     } else {
         // Broadcast
         that.listQueues(function (queueUrls) {
-            queueUrls.forEach(function (url, index, array) {
+            var numToSend = queueUrls.length;
+            queueUrls.forEach(function (url) {
                 var messageCopy = Object.assign({}, message);
                 messageCopy.QueueUrl = url;
                 that.sqsApi.sendMessage(messageCopy, function (err, data) {
                     if (err) {
-                        console.log('Error', err);
+                        console.error(err);
                     } else {
                         console.log('Sent', data.MessageId, 'to', url);
+                    }
+                    numToSend -= 1;
+                    if (numToSend <= 0) {
+                        promise._done = true;
                     }
                 });
             })
         });
     }
+    return promise;
+};
+
+SqsIo.prototype.wait = function(promises, cb) {
+    function waitForDone() {
+        var isDone;
+        if (promises === null) {
+            isDone = true;
+        } else if (promises instanceof Array) {
+            isDone = promises.every(function(promise) {
+                return promise.isDone();
+            });
+        } else {
+            isDone = promises.isDone();
+        }
+        if (isDone) {
+            cb();
+        } else {
+            setTimeout(waitForDone, 50);
+        }
+    }
+    waitForDone();
 };

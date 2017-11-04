@@ -13,33 +13,39 @@ module.exports = function() {
         settings = this.settings,
         User = models.user;
 
-    core.on('presence:user_join', function(data) {
+    // core.on('presence:user_join',
+    function onUserJoin(data, cb) {
         User.findById(data.userId, function (err, user) {
+            var promise = null;
             if (!err && user) {
                 user = user.toJSON();
                 user.room = data.roomId;
                 if (data.roomHasPassword) {
-                    sqs.to(data.roomId).emit('users:join', user);
+                    promise = sqs.to(data.roomId).emit('users:join', user);
                 } else {
-                    sqs.emit('users:join', user);
+                    promise = sqs.emit('users:join', user);
                 }
             }
+            sqs.wait(promise, cb);
         });
-    });
+    }
 
-    core.on('presence:user_leave', function(data) {
+    // core.on('presence:user_leave',
+    function onUserLeave(data, cb) {
         User.findById(data.userId, function (err, user) {
+            var promise = null;
             if (!err && user) {
                 user = user.toJSON();
                 user.room = data.roomId;
                 if (data.roomHasPassword) {
-                    sqs.to(data.roomId).emit('users:leave', user);
+                    promise = sqs.to(data.roomId).emit('users:leave', user);
                 } else {
-                    sqs.emit('users:leave', user);
+                    promise = sqs.emit('users:leave', user);
                 }
             }
+            sqs.wait(promise, cb);
         });
-    });
+    }
 
     var getEmitters = function(room) {
         if (room.private && !room.hasPassword) {
@@ -56,26 +62,29 @@ module.exports = function() {
         }];
     };
 
-    core.on('rooms:new', function(room) {
+    function onNew(room, cb) {
         var emitters = getEmitters(room);
-        emitters.forEach(function(e) {
-            e.emitter.emit('rooms:new', room.toJSON(e.user));
+        var promises = emitters.map(function(e) {
+            return e.emitter.emit('rooms:new', room.toJSON(e.user));
         });
-    });
+        sqs.wait(promises, cb);
+    }
 
-    core.on('rooms:update', function(room) {
+    function onUpdate(room, cb) {
         var emitters = getEmitters(room);
-        emitters.forEach(function(e) {
-            e.emitter.emit('rooms:update', room.toJSON(e.user));
+        var promises = emitters.map(function(e) {
+            return e.emitter.emit('rooms:update', room.toJSON(e.user));
         });
-    });
+        sqs.wait(promises, cb);
+    }
 
-    core.on('rooms:archive', function(room) {
+    function onArchive(room, cb) {
         var emitters = getEmitters(room);
-        emitters.forEach(function(e) {
-            e.emitter.emit('rooms:archive', room.toJSON(e.user));
+        var promises = emitters.map(function(e) {
+            return e.emitter.emit('rooms:archive', room.toJSON(e.user));
         });
-    });
+        sqs.wait(promises, cb);
+    }
 
     var listRoomsHandler = function(req, res) {
         var options = {
@@ -141,13 +150,9 @@ module.exports = function() {
                 return res.status(400).json(err);
             }
 
-            if (settings.lambdaEnabled) {
-                setTimeout(function() {
-                    res.status(201).json(room.toJSON(req.user));
-                }, settings.lambda.sqsDelay);
-            } else {
+            onNew(room, function() {
                 res.status(201).json(room.toJSON(req.user));
-            }
+            });
         });
     };
 
@@ -179,13 +184,9 @@ module.exports = function() {
                 return res.sendStatus(404);
             }
 
-            if (settings.lambdaEnabled) {
-                setTimeout(function() {
-                    res.json(room.toJSON(req.user));
-                }, settings.lambda.sqsDelay);
-            } else {
+            onUpdate(room, function() {
                 res.json(room.toJSON(req.user));
-            }
+            });
         });
     };
 
@@ -202,13 +203,9 @@ module.exports = function() {
                 return res.sendStatus(404);
             }
 
-            if (settings.lambdaEnabled) {
-                setTimeout(function() {
-                    res.sendStatus(204);
-                }, settings.lambda.sqsDelay);
-            } else {
+            onArchive(room, function() {
                 res.sendStatus(204);
-            }
+            });
         });
     };
 
@@ -270,21 +267,27 @@ module.exports = function() {
                         return res.sendStatus(404);
                     }
 
-                    user.rooms.addToSet({_id: roomId});
-                    user.openRooms.addToSet(roomId);
-                    room.participants.addToSet({_id: userId});
-                    user.save();
-                    room.save();
-
-                    // Announce that the user has joined
-                    core.presence.join(user, room);
-                    if (settings.lambdaEnabled) {
-                        setTimeout(function () {
-                            res.json(room.toJSON(req.user));
-                        }, settings.lambda.sqsDelay);
-                    } else {
-                        res.json(room.toJSON(req.user));
+                    // Modify the DB
+                    function updateDB(cb) {
+                        user.rooms.addToSet({_id: roomId});
+                        user.openRooms.addToSet(roomId);
+                        room.participants.addToSet({_id: userId});
+                        user.save(function() {
+                            room.save(function() {
+                                cb();
+                            });
+                        });
                     }
+
+                    updateDB(function() {
+                        // Announce that the user has joined
+                        onUserJoin(
+                            core.presence.leave(user, room),
+                            function() {
+                                res.json(room.toJSON(req.user));
+                            }
+                        );
+                    });
                 });
             });
         });
@@ -313,23 +316,28 @@ module.exports = function() {
                 if (!room) {
                     return res.sendStatus(404);
                 }
-                // Announce that the user has left
-                core.presence.leave(user, room);
 
                 // Modify the DB
-                user.rooms.pull({_id: roomId});
-                user.openRooms.pull(roomId);
-                room.participants.pull({_id: userId});
-                user.save();
-                room.save();
-
-                if (settings.lambdaEnabled) {
-                    setTimeout(function () {
-                        res.json();
-                    }, settings.lambda.sqsDelay);
-                } else {
-                    res.json();
+                function updateDB(cb) {
+                    user.rooms.pull({_id: roomId});
+                    user.openRooms.pull(roomId);
+                    room.participants.pull({_id: userId});
+                    user.save(function() {
+                        room.save(function() {
+                            cb();
+                        });
+                    });
                 }
+
+                updateDB(function() {
+                    // Announce that the user has left
+                    onUserLeave(
+                        core.presence.leave(user, room),
+                        function() {
+                            res.json();
+                        }
+                    );
+                });
             });
         });
     };

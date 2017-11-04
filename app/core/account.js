@@ -62,13 +62,13 @@ AccountManager.prototype.update = function(id, options, cb) {
                 return cb(err);
             }
 
-            this.core.emit('account:update', {
+            var update = {
                 usernameChanged: usernameChange,
                 user: user.toJSON()
-            });
+            };
 
             if (cb) {
-                cb(null, user);
+                cb(null, user, update);
             }
 
         }.bind(this));

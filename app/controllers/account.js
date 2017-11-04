@@ -18,9 +18,10 @@ module.exports = function() {
         middlewares = this.middlewares,
         settings = this.settings;
 
-    core.on('account:update', function(data) {
-        sqs.emit('users:update', data.user);
-    });
+    function onUpdate(data, cb) {
+        var promise = sqs.emit('users:update', data.user);
+        sqs.wait(promise, cb);
+    }
 
     // Hack since API gateway mauls binary data
     var assetUrl;
@@ -214,7 +215,7 @@ module.exports = function() {
                 openRooms: form.openRooms,
             };
 
-        core.account.update(req.user._id, data, function (err, user) {
+        core.account.update(req.user._id, data, function (err, user, update) {
             if (err) {
                 return res.json({
                     status: 'error',
@@ -227,7 +228,13 @@ module.exports = function() {
                 return res.sendStatus(404);
             }
 
-            res.json(user);
+            if (update !== null) {
+                onUpdate(update, function() {
+                    res.json(user);
+                });
+            } else {
+                res.json(user);
+            }
         });
     };
 
