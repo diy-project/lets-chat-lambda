@@ -163,7 +163,7 @@ function postMongooseSetup() {
         compile: true,
         fingerprinting: true
     };
-    if (lambdaEnabled && settings.cdn.enabled) {
+    if (settings.cdn.enabled) {
         connectAssetsOptions.servePath = settings.cdn.url + '/dist';
     } else {
         connectAssetsOptions.servePath = 'media/dist';
