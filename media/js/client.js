@@ -60,6 +60,10 @@
                 that.switchRoom(room.id);
             }
             callback && callback(room);
+        }).fail(function(code, text) {
+            swal("Unable to create room",
+                "Room slugs can only contain lower case letters, numbers or underscores!",
+                "error");
         });
     };
     Client.prototype.getRooms = function(cb) {
@@ -566,7 +570,7 @@
                 _.each(that.rooms.where({ joined: true }), function(room) {
                     that.rejoinRoom(room);
                 });
-            }, 60 * 1000); // Every minute
+            }, 4 * 60 * 1000); // Every four minutes
 
             that.getSqsUrl();
             that.refreshSqsClient();
