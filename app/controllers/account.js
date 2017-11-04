@@ -19,8 +19,38 @@ module.exports = function() {
         settings = this.settings;
 
     function onUpdate(data, cb) {
-        var promise = sqs.emit('users:update', data.user);
-        sqs.wait(promise, cb);
+        function cb2() {
+            var promise = sqs.emit('users:update', data.user);
+            sqs.wait(promise, cb);
+        }
+        var userId = data.user.id.toString();
+        core.users.get(userId, function (err, user) {
+            if (err) {
+                console.error(err);
+                cb2();
+                return;
+            }
+
+            if (!user) {
+                cb2();
+                return;
+            }
+
+            var new_data = {
+                userId: userId,
+                oldUsername: user.username,
+                username: data.user.username
+            };
+
+            if (user) {
+                _.assign(user, data.user, { id: userId });
+            }
+
+            if (data.usernameChanged) {
+                // Emit to all rooms, that this user has changed their username
+                core.presence.usernameChanged(user, new_data, sqs, cb2);
+            }
+        });
     }
 
     // Hack since API gateway mauls binary data
@@ -275,19 +305,20 @@ module.exports = function() {
                     });
                 }
 
-                core.account.update(req.user._id, data, function (err, user, reason) {
+                core.account.update(req.user._id, data, function (err, user, update) {
                     if (err || !user) {
                         return res.status(400).json({
                             status: 'error',
                             message: 'Unable to update your account.',
-                            reason: reason,
+                            reason: 'Unknow reason',
                             errors: err
                         });
                     }
-                    if (settings.lambdaEnabled) {
-                        setTimeout(function() {
+
+                    if (update !== null) {
+                        onUpdate(update, function() {
                             res.json(user);
-                        }, settings.lambda.sqsDelay);
+                        });
                     } else {
                         res.json(user);
                     }

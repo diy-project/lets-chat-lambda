@@ -9,43 +9,7 @@ module.exports = function() {
         sqs = this.sqs,
         core = this.core,
         middlewares = this.middlewares,
-        models = this.models,
-        settings = this.settings,
-        User = models.user;
-
-    // core.on('presence:user_join',
-    function onUserJoin(data, cb) {
-        User.findById(data.userId, function (err, user) {
-            var promise = null;
-            if (!err && user) {
-                user = user.toJSON();
-                user.room = data.roomId;
-                if (data.roomHasPassword) {
-                    promise = sqs.to(data.roomId).emit('users:join', user);
-                } else {
-                    promise = sqs.emit('users:join', user);
-                }
-            }
-            sqs.wait(promise, cb);
-        });
-    }
-
-    // core.on('presence:user_leave',
-    function onUserLeave(data, cb) {
-        User.findById(data.userId, function (err, user) {
-            var promise = null;
-            if (!err && user) {
-                user = user.toJSON();
-                user.room = data.roomId;
-                if (data.roomHasPassword) {
-                    promise = sqs.to(data.roomId).emit('users:leave', user);
-                } else {
-                    promise = sqs.emit('users:leave', user);
-                }
-            }
-            sqs.wait(promise, cb);
-        });
-    }
+        settings = this.settings;
 
     var getEmitters = function(room) {
         if (room.private && !room.hasPassword) {
@@ -281,12 +245,9 @@ module.exports = function() {
 
                     updateDB(function() {
                         // Announce that the user has joined
-                        onUserJoin(
-                            core.presence.leave(user, room),
-                            function() {
-                                res.json(room.toJSON(req.user));
-                            }
-                        );
+                        core.presence.join(user, room, sqs, function() {
+                            res.json(room.toJSON(req.user));
+                        });
                     });
                 });
             });
@@ -331,12 +292,9 @@ module.exports = function() {
 
                 updateDB(function() {
                     // Announce that the user has left
-                    onUserLeave(
-                        core.presence.leave(user, room),
-                        function() {
-                            res.json();
-                        }
-                    );
+                    core.presence.leave(user, room, sqs, function() {
+                        res.json();
+                    });
                 });
             });
         });
