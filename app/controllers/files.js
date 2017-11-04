@@ -151,4 +151,5 @@ module.exports = function() {
         .all(middlewares.requireLogin)
         .get(getFileHandler);
 
+    app.get('/transcript/files/:id/:name', middlewares.requireLogin, getFileHandler);
 };
