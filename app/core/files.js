@@ -88,10 +88,15 @@ FileManager.prototype.create = function(options, cb) {
                             room: room,
                             owner: user.id,
                             text: 'upload://' + savedFile.url
+                        }, function(err, message) {
+                            if (err) {
+                                console.error(err);
+                            }
+                            cb(null, savedFile, room, user, message);
                         });
+                    } else {
+                        cb(null, savedFile, room, user, null);
                     }
-
-                    cb(null, savedFile, room, user);
                 }.bind(this));
             }.bind(this));
         }.bind(this));

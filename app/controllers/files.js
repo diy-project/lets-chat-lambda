@@ -19,12 +19,21 @@ module.exports = function() {
         return;
     }
 
-    function onNew(file, room, user, cb) {
+    function onNewFile(file, room, user, cb) {
         var fil = file.toJSON();
         fil.owner = user;
         fil.room = room.toJSON(user);
 
         var promise = sqs.to(room._id).emit('files:new', fil);
+        sqs.wait(promise, cb);
+    }
+
+    function onNewMessage(message, room, user, cb) {
+        var msg = message.toJSON();
+        msg.owner = user;
+        msg.room = room.toJSON(user);
+
+        var promise = sqs.to(room.id).emit('messages:new', msg);
         sqs.wait(promise, cb);
     }
 
@@ -66,20 +75,28 @@ module.exports = function() {
             return res.sendStatus(400);
         }
 
+        var postInRoom = (req.param('post') === 'true') && true;
         var options = {
             owner: req.user._id,
             room: req.param('room'),
             file: req.files[0],
-            post: (req.param('post') === 'true') && true
+            post: postInRoom
         };
 
-        core.files.create(options, function(err, file, room, user) {
+        core.files.create(options, function(err, file, room, user, message) {
             if (err) {
                 console.error(err);
                 return res.sendStatus(400);
             }
-            onNew(file, room, user, function() {
-                res.status(201).json(file);
+            onNewFile(file, room, user, function() {
+                function cb() {
+                    res.status(201).json(file);
+                }
+                if (message !== null) {
+                    onNewMessage(message, room, user, cb);
+                } else {
+                    cb();
+                }
             });
         });
     };
