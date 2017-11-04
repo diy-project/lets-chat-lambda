@@ -49,6 +49,7 @@
             private: data.private
         };
         var callback = data.callback;
+        // TODO: fix error handling here
         $.post('/rooms', room, function(room) {
             if (room && room.errors) {
                 swal("Unable to create room",
