@@ -32,7 +32,7 @@ var _ = require('lodash'),
     sqsIo = require('./app/sqs-io');
 
 var MongoStore = connectMongo(session),
-    lambdaEnabled = process.env.AWS_LAMBDA && process.env.AWS_LAMBDA == 'TRUE',
+    lambdaEnabled = process.env.AWS_LAMBDA && process.env.AWS_LAMBDA === 'TRUE',
     httpEnabled = !lambdaEnabled && settings.http && settings.http.enable,
     httpsEnabled = !lambdaEnabled && settings.https && settings.https.enable,
     filesEnabled = settings.files && settings.files.enable,
@@ -77,28 +77,6 @@ if (settings.env === 'production') {
     app.set('json spaces', undefined);
     app.enable('view cache');
 }
-
-//
-// Mongo
-//
-var isConnectedBefore = false;
-mongoose.connection.on('error', function() {
-    console.log('Could not connect to MongoDB');
-});
-mongoose.connection.on('disconnected', function(){
-    console.log('Lost MongoDB connection...');
-    if (!isConnectedBefore) {
-        connect();
-    }
-});
-mongoose.connection.on('connected', function() {
-    isConnectedBefore = true;
-    console.log('Connection established to MongoDB');
-});
-
-mongoose.connection.on('reconnected', function() {
-    console.log('Reconnected to MongoDB');
-});
 
 // Set compression before any routes
 if (!lambdaEnabled) {
@@ -302,26 +280,52 @@ function runLocalApp() {
     console.log('\n' + art + '\n\n' + 'Release ' + psjon.version.yellow + '\n');
 }
 
+//
+// Mongo
+//
+function connectCB(err) {
+        if (err) {
+            throw err;
+        }
+
+        // Finish setting up the app
+        postMongooseSetup();
+        appIsReady = true;
+
+        // Start listening if running locally
+        if (httpEnabled || httpsEnabled) {
+            runLocalApp();
+        }
+}
+if (process.env.DATABASE_URI) {
+    settings.database.uri = process.env.DATABASE_URI;
+}
 var appIsReady = false;
+var isConnectedBefore = false;
 var mongooseOptions = {
     useMongoClient: true,
     autoIndex: false,
     poolSize: 2
 };
-mongoose.connect(settings.database.uri, mongooseOptions, function(err) {
-    if (err) {
-        throw err;
-    }
-
-    // Finish setting up the app
-    postMongooseSetup();
-    appIsReady = true;
-
-    // Start listening if running locally
-    if (httpEnabled || httpsEnabled) {
-        runLocalApp();
+mongoose.connection.on('error', function() {
+    console.log('Could not connect to MongoDB');
+});
+mongoose.connection.on('disconnected', function(){
+    console.log('Lost MongoDB connection...');
+    if (!isConnectedBefore) {
+        mongoose.connect(settings.database.uri, mongooseOptions, connectCB);
     }
 });
+mongoose.connection.on('connected', function() {
+    isConnectedBefore = true;
+    console.log('Connection established to MongoDB');
+});
+
+mongoose.connection.on('reconnected', function() {
+    console.log('Reconnected to MongoDB');
+});
+
+mongoose.connect(settings.database.uri, mongooseOptions, connectCB);
 
 //
 // Run on AWS lambda
@@ -332,8 +336,8 @@ if (lambdaEnabled) {
             if (appIsReady) {
                 awsServerlessExpress.proxy(server, event, context);
             } else {
-                console.log('app not ready, trying again in 100ms');
-                setTimeout(handleLambdaRequest, 100);
+                console.log('app not ready, trying again in 50ms');
+                setTimeout(handleLambdaRequest, 50);
             }
         }
         handleLambdaRequest();
