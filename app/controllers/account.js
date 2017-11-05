@@ -49,6 +49,8 @@ module.exports = function() {
             if (data.usernameChanged) {
                 // Emit to all rooms, that this user has changed their username
                 core.presence.usernameChanged(user, new_data, sqs, cb2);
+            } else {
+                cb2();
             }
         });
     }
@@ -242,7 +244,7 @@ module.exports = function() {
                 displayName: form.displayName || form['display-name'],
                 firstName: form.firstName || form['first-name'],
                 lastName: form.lastName || form['last-name'],
-                openRooms: form.openRooms,
+                openRooms: form.openRooms
             };
 
         core.account.update(req.user._id, data, function (err, user, update) {
