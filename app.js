@@ -4,6 +4,8 @@
 
 'use strict';
 
+var appInitTime = new Date().getTime();
+
 process.title = 'letschat';
 
 require('colors');
@@ -292,6 +294,10 @@ function connectCB(err) {
         postMongooseSetup();
         appIsReady = true;
 
+        // Log how long it took the container to set up
+        var appReadyTime = new Date().getTime() - appInitTime;
+        console.log('app ready in ' + appReadyTime + 'ms');
+
         // Start listening if running locally
         if (httpEnabled || httpsEnabled) {
             runLocalApp();
@@ -336,8 +342,8 @@ if (lambdaEnabled) {
             if (appIsReady) {
                 awsServerlessExpress.proxy(server, event, context);
             } else {
-                console.log('app not ready, trying again in 50ms');
-                setTimeout(handleLambdaRequest, 50);
+                console.log('app not ready, trying again in 100ms');
+                setTimeout(handleLambdaRequest, 100);
             }
         }
         handleLambdaRequest();
