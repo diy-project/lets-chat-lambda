@@ -42,4 +42,7 @@ module.exports = function() {
         .post(postPresenceHandler)
         .delete(removePresenceHandler);
 
+    app.get('/presence/ping', middlewares.requireLogin, function(req, res) {
+        res.json({msg: 'pong'});
+    });
 };

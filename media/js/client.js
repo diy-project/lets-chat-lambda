@@ -17,6 +17,10 @@
         this.sqs = undefined;
         this.sqsUrl = undefined;
         this.sqsExpireTime = undefined;
+
+        // Store some state in the client
+        this.stats = {};
+
         return this;
     };
     //
@@ -130,7 +134,7 @@
     Client.prototype.archiveRoom = function(options) {
         console.log(options);
         var archiveRoomCB = function(data, text, xhr) {
-            if (xhr.status != 204) {
+            if (xhr.status !== 204) {
                 swal('Unable to Archive!',
                     'Unable to archive this room!',
                     'error');
@@ -333,6 +337,7 @@
         }, this);
     };
     Client.prototype.sendMessage = function(message) {
+        this.stats.lastMessageSendTime = new Date().getTime();
         $.post('/messages', message)
     };
     Client.prototype.getMessages = function(query, callback) {
@@ -490,6 +495,11 @@
     Client.prototype.handleEvent = function(event, data) {
         console.log(event, data);
         if (event === 'messages:new') {
+            if (this.stats.lastMessageSendTime && data.owner.id == this.user.id) {
+                var messageTime = new Date().getTime() - this.stats.lastMessageSendTime;
+                this.stats.lastMessageSendTime = undefined;
+                console.log('message latency: ' + messageTime + 'ms');
+            }
             this.addMessage(data);
         } else if (event === 'rooms:new') {
             this.addRoom(data);
