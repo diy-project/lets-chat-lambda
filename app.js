@@ -5,6 +5,10 @@
 'use strict';
 
 var appInitTime = new Date().getTime();
+function logMillisSinceInit(message) {
+    var millisSinceInit = new Date().getTime() - appInitTime;
+    console.log(message + ': ' + millisSinceInit + 'ms');
+}
 
 process.title = 'letschat';
 
@@ -33,6 +37,8 @@ var _ = require('lodash'),
     core = require('./app/core/index'),
     sqsIo = require('./app/sqs-io');
 
+logMillisSinceInit('Loaded third-party deps');
+
 var MongoStore = connectMongo(session),
     lambdaEnabled = process.env.AWS_LAMBDA && process.env.AWS_LAMBDA === 'TRUE',
     httpEnabled = !lambdaEnabled && settings.http && settings.http.enable,
@@ -43,7 +49,12 @@ var MongoStore = connectMongo(session),
     controllers = all(path.resolve('./app/controllers')),
     app, server, sqs;
 
+logMillisSinceInit('Loaded app modules');
+
 // Add these to settings
+if (process.env.DATABASE_URI) {
+    settings.database.uri = process.env.DATABASE_URI;
+}
 settings.lambdaEnabled = lambdaEnabled;
 settings.httpEnabled = httpEnabled;
 settings.httpsEnabled = httpsEnabled;
@@ -66,6 +77,8 @@ if (httpsEnabled) {
     throw new Error('No server enabled');
 }
 sqs = sqsIo(settings.sqs);
+
+logMillisSinceInit('Loaded express and sqs-io');
 
 if (filesEnabled) {
     if (settings.files.provider !== 's3') {
@@ -93,8 +106,6 @@ function postMongooseSetup() {
     var sessionStore = new MongoStore({
         mongooseConnection: mongoose.connection
     });
-
-    // Session
     app.use(session({
         key: 'connect.sid',
         secret: settings.secrets.cookie,
@@ -103,10 +114,12 @@ function postMongooseSetup() {
         resave: false,
         saveUninitialized: true
     }));
+    logMillisSinceInit('Session setup done');
 
     app.use(cookieParser());
 
     auth.setup(app, core);
+    logMillisSinceInit('Auth setup done');
 
     // Security protections
     app.use(helmet.frameguard());
@@ -130,6 +143,7 @@ function postMongooseSetup() {
         objectSrc: ['\'self\''],
         imgSrc: ['* data:']
     }));
+    logMillisSinceInit('Helmet (security) setup done');
 
     var bundles = {};
     var connectAssetsOptions = {
@@ -149,11 +163,13 @@ function postMongooseSetup() {
         connectAssetsOptions.servePath = 'media/dist';
     }
     app.use(require('connect-assets')(connectAssetsOptions));
+    logMillisSinceInit('Static assets setup done');
 
     // Public
     app.use('/media', express.static(__dirname + '/media', {
         maxAge: '364d'
     }));
+    logMillisSinceInit('Static dir /media setup done');
 
     // Templates
     var nun = nunjucks.configure('templates', {
@@ -182,6 +198,7 @@ function postMongooseSetup() {
     nun.addFilter('js', wrapBundler(bundles.js));
     nun.addFilter('css', wrapBundler(bundles.css));
     nun.addGlobal('text_search', false);
+    logMillisSinceInit('Template setup done');
 
     // i18n
     i18n.configure({
@@ -203,6 +220,8 @@ function postMongooseSetup() {
         next();
     });
 
+    logMillisSinceInit('i18n, HTTP middleware, IE header setup done');
+
     //
     // Controllers
     //
@@ -217,6 +236,7 @@ function postMongooseSetup() {
             controllers: controllers
         });
     });
+    logMillisSinceInit('App controllers setup done');
 
     //
     // Mongoose
@@ -251,6 +271,7 @@ function postMongooseSetup() {
         });
     }
     checkForMongoTextSearch();
+    logMillisSinceInit('Mongo text-search check complete');
 }
 
 //
@@ -290,21 +311,18 @@ function connectCB(err) {
             throw err;
         }
 
+        logMillisSinceInit('Connected to MongoDB');
+
         // Finish setting up the app
         postMongooseSetup();
         appIsReady = true;
 
-        // Log how long it took the container to set up
-        var appReadyTime = new Date().getTime() - appInitTime;
-        console.log('app ready in ' + appReadyTime + 'ms');
+        logMillisSinceInit('App ready');
 
         // Start listening if running locally
         if (httpEnabled || httpsEnabled) {
             runLocalApp();
         }
-}
-if (process.env.DATABASE_URI) {
-    settings.database.uri = process.env.DATABASE_URI;
 }
 var appIsReady = false;
 var isConnectedBefore = false;
@@ -331,6 +349,9 @@ mongoose.connection.on('reconnected', function() {
     console.log('Reconnected to MongoDB');
 });
 
+var tryConnectMongoTime = new Date().getTime() - appInitTime;
+console.log('trying to connect to MongoDB at ' + tryConnectMongoTime + 'ms');
+
 mongoose.connect(settings.database.uri, mongooseOptions, connectCB);
 
 //
@@ -340,6 +361,7 @@ if (lambdaEnabled) {
     exports.handler = function (event, context) {
         function handleLambdaRequest() {
             if (appIsReady) {
+                logMillisSinceInit('Serving request');
                 awsServerlessExpress.proxy(server, event, context);
             } else {
                 console.log('app not ready, trying again in 100ms');
